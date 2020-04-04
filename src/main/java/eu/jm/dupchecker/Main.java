@@ -1,6 +1,8 @@
 package eu.jm.dupchecker;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -47,15 +49,15 @@ public class Main {
 
 			Options o = new Options().setHashType(HashType.PARTIAL);
 
-			Set<String> optionNames = args.getOptionNames();
-			if (optionNames == null || optionNames.contains("scan")) {
+			Set<Action> optionNames = parseOptions(args.getOptionNames());
+			if (optionNames.contains(Action.SCAN)) {
 				o.setMaxDepth(999);
 				scannerService.scan3(di, o);
-			} else if (optionNames.contains("check")) {
+			} else if (optionNames.contains(Action.CHECK)) {
 				o.setMaxDepth(0);
 
 				scannerService.check(di, o);
-			} else if (optionNames.contains("report")) {
+			} else if (optionNames.contains(Action.REPORT)) {
 				o.setMaxDepth(0);
 
 				scannerService.report();
@@ -63,7 +65,25 @@ public class Main {
 		};
 	}
 
-	private static enum Actions {
+	private static Set<Action> parseOptions(Set<String> optionNames) {
+		if (optionNames == null) {
+			return Collections.emptySet();
+		}
+
+		Set<Action> actions = new HashSet<>();
+
+		optionNames.stream().forEach(v -> {
+			try {
+				actions.add(Action.valueOf(v.toUpperCase()));
+			} catch (Exception e) {
+				// not a big deal
+				LOGGER.debug("Option {} not recognised. {}", v, e.getMessage());
+			}
+		});
+		return actions;
+	}
+
+	private static enum Action {
 		SCAN, CHECK, REPORT;
 	}
 }

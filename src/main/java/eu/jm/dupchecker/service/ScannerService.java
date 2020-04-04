@@ -3,7 +3,6 @@ package eu.jm.dupchecker.service;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +45,7 @@ public class ScannerService {
 		k.setDirectory(parent);
 		k.setName(f.getName());
 		k.setLength(f.length());
-		k.setLastModified(new Date(f.lastModified()));
+		k.setLastModified(f.lastModified());
 
 		k.setPartialHash(hd.getPartialHash());
 		k.setFullHash(hd.getFullHash());
@@ -85,18 +83,8 @@ public class ScannerService {
 			String fileName = f.getName();
 			if (filesMap.containsKey(fileName)) {
 				File file = filesMap.get(fileName);
-				if (!sameFile(file, f)
-						|| (StringUtils.isEmpty(f.getFullHash()) && options.getHashType() == HashType.FULL)) {
-					// update DB;
-					HashData hd = HashUtils.getHashData(file, options.getHashType());
+				archiveRepository.processFile(f, file, options.getHashType());
 
-					f.setFullHash(hd.getFullHash());
-					f.setPartialHash(hd.getPartialHash());
-					f.setLength(file.length());
-					f.setLastModified(new Date(file.lastModified()));
-
-					archiveRepository.update(f);
-				}
 				newArchives.add(f);
 
 				filesMap.remove(fileName);
@@ -114,10 +102,6 @@ public class ScannerService {
 			filesMap.values().stream().filter(f -> f.isDirectory() && f.canRead())
 					.forEach(f -> scan3(f, options, maxDepth - 1));
 		}
-	}
-
-	private static boolean sameFile(File file, Archive archive) {
-		return (file.length() == archive.getLength() && file.lastModified() == archive.getLastModified().getTime());
 	}
 
 	public TreeMap<Archive, List<Archive>> check(File dir, Options options) {
@@ -153,7 +137,7 @@ public class ScannerService {
 		return duplicates;
 	}
 
-	public void report() {
+	public Map<String, List<Archive>> report() {
 		Map<String, List<Archive>> duplicates = archiveRepository.findAllDuplicates();
 
 		int group = 1;
@@ -164,6 +148,6 @@ public class ScannerService {
 				LOGGER.info("\t{}/{}", a.getDirectory().getCanonicalPath(), a.getName());
 			}
 		}
-
+		return duplicates;
 	}
 }

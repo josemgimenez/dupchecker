@@ -8,7 +8,7 @@ create table archive (
 	id INTEGER PRIMARY KEY autoincrement,
 	name text,
 	length integer,
-	last_modified datetime,
+	last_modified numeric,
 	partial_hash text,
 	full_hash text,
 	directory_id integer);

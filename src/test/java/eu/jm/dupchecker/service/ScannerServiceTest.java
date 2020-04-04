@@ -1,5 +1,7 @@
 package eu.jm.dupchecker.service;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.File;
@@ -56,7 +58,7 @@ public class ScannerServiceTest extends AllUnitTest {
 	}
 
 	@Test
-	public void testUpdate() throws IOException {
+	public void testUpdate() throws IOException, InterruptedException {
 		Options o = new Options().setMaxDepth(1);
 
 		File workingDir = getTestWorkDirectory();
@@ -68,17 +70,46 @@ public class ScannerServiceTest extends AllUnitTest {
 		scannerService.scan3(workingDir, o);
 		assertDbContents(1, 1);
 
-		Archive a1 = em.createQuery("select d from Archive d", Archive.class).getResultList().get(0);
+		Archive a1 = em.createQuery("select a from Archive a", Archive.class).getResultList().get(0);
 
 		f1 = createFile(workingDir, "a.txt");
+		// Precision is of 1 second, so instead of waiting we just move the time a few
+		// seconds to the past
+		f1.setLastModified(System.currentTimeMillis() - 10000);
 
 		scannerService.scan3(workingDir, o);
-		Archive a2 = em.createQuery("select d from Archive d", Archive.class).getResultList().get(0);
+		assertDbContents(1, 1);
+		Archive a2 = em.createQuery("select a from Archive a", Archive.class).getResultList().get(0);
 
 		LOGGER.info("a1 {} - a2 {}", a1, a2);
 		assertNotEquals(a1.getPartialHash(), a2.getPartialHash(), "The partial hash has to be different");
 
 		assertDbContents(1, 1);
+	}
+
+	@Test
+	public void testFileMillis() throws IOException {
+		Options o = new Options().setMaxDepth(1);
+
+		File workingDir = getTestWorkDirectory();
+		assertDbContents(0, 0);
+
+		File f1 = createFile(workingDir, "a.txt");
+		deleteAfterTest(f1);
+
+		scannerService.scan3(workingDir, o);
+
+		Archive a1 = em.createQuery("select a from Archive a", Archive.class).getResultList().get(0);
+
+		assertEquals(f1.lastModified(), a1.getLastModified());
+
+		em.detach(a1);
+		em.clear();
+		a1 = null;
+
+		Archive a2 = em.createQuery("select a from Archive a", Archive.class).getResultList().get(0);
+		assertTrue(a1 != a2);
+		assertEquals(f1.lastModified(), a2.getLastModified());
 	}
 
 	@Test
@@ -146,6 +177,7 @@ public class ScannerServiceTest extends AllUnitTest {
 
 		Assert.assertNotNull("Partial hash has to be present", a1.getPartialHash());
 		Assert.assertNull("Full hash has to be absent", a1.getFullHash());
+		Assert.assertEquals(f1.lastModified(), a1.getLastModified().longValue());
 
 		Options oFull = new Options().setMaxDepth(0).setHashType(HashType.FULL);
 		scannerService.scan3(workingDir, oFull);

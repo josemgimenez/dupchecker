@@ -1,7 +1,5 @@
 package eu.jm.dupchecker.entity;
 
-import java.util.Date;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -27,7 +25,7 @@ public class Archive {
 	private Long length;
 
 	@Column(name = "last_modified")
-	private Date lastModified;
+	private Long lastModified;
 
 	@Column(name = "partial_hash")
 	private String partialHash;
@@ -65,11 +63,11 @@ public class Archive {
 		this.length = length;
 	}
 
-	public Date getLastModified() {
+	public Long getLastModified() {
 		return lastModified;
 	}
 
-	public void setLastModified(Date lastModified) {
+	public void setLastModified(Long lastModified) {
 		this.lastModified = lastModified;
 	}
 
